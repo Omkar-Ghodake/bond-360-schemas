@@ -1,4 +1,4 @@
-const RoleAssignmentSchema = new Schema(
+const RoleAssignment = new Schema(
   {
     employeeId: {
       type: Schema.Types.ObjectId,
@@ -61,7 +61,7 @@ const RoleAssignmentSchema = new Schema(
 )
 
 // Only ONE active Program Manager per Team
-RoleAssignmentSchema.index(
+RoleAssignment.index(
   { role: 1, scopeType: 1, scopeId: 1 },
   {
     unique: true,
@@ -74,7 +74,7 @@ RoleAssignmentSchema.index(
 )
 
 // Fast authorization checks
-RoleAssignmentSchema.index({
+RoleAssignment.index({
   employeeId: 1,
   role: 1,
   scopeType: 1,
@@ -83,4 +83,4 @@ RoleAssignmentSchema.index({
 })
 
 // History queries
-RoleAssignmentSchema.index({ scopeType: 1, scopeId: 1, assignedAt: -1 })
+RoleAssignment.index({ scopeType: 1, scopeId: 1, assignedAt: -1 })
