@@ -1,0 +1,166 @@
+BACKGROUND JOBS, ASYNC TASKS, AND CLEANUP RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines background and asynchronous
+operations that must not block API requests.
+
+These jobs improve performance, reliability, and
+system hygiene without affecting core correctness.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. User-facing APIs must return fast
+2. Heavy or non-critical work runs asynchronously
+3. Async failures must not corrupt core data
+4. Jobs must be idempotent where possible
+5. Background jobs must be observable and retryable
+
+==================================================
+ASYNC VS SYNC DECISION RULES
+==================================================
+
+RUN SYNCHRONOUSLY:
+- Authorization checks
+- Validation and state transitions
+- Core document creation
+- Transactional writes
+
+RUN ASYNCHRONOUSLY:
+- Notifications
+- Media cleanup
+- Analytics precomputation
+- Cache refresh
+- Audit log TTL cleanup (DB-level)
+
+==================================================
+BACKGROUND JOB TYPES
+==================================================
+
+1. NOTIFICATION JOBS
+2. MEDIA CLEANUP JOBS
+3. METRIC RECALCULATION JOBS
+4. CACHE WARMING JOBS
+5. PERIODIC MAINTENANCE JOBS
+
+==================================================
+1. NOTIFICATION JOBS
+==================================================
+
+TRIGGERS:
+- User mentioned in bug comment
+- Bug severity changed
+- Session started or ended
+- Role assignment changed
+
+OPERATIONS:
+- Resolve recipients
+- Generate notification payload
+- Send via configured channels
+
+RULES:
+- Must not block API
+- Failure must be logged
+- Retry allowed with backoff
+
+==================================================
+2. MEDIA CLEANUP JOBS
+==================================================
+
+TRIGGERS:
+- Media archived
+- Bug archived
+- Scheduled cleanup job
+
+OPERATIONS:
+- Identify archived media
+- Delete files from storage provider
+- Retain database record for audit
+
+RULES:
+- Must be idempotent
+- Never delete active media
+- Storage deletion must be retriable
+
+==================================================
+3. METRIC RECALCULATION JOBS
+==================================================
+
+TRIGGERS:
+- Bug severity change
+- Bug deletion or archival
+- Session completion
+
+OPERATIONS:
+- Recalculate affected TeamMemberMetric
+- Validate finalized state
+- Store updated metrics
+
+RULES:
+- Prefer synchronous update for small changes
+- Use background job for bulk recalculation
+- Finalized metrics must not be modified
+
+==================================================
+4. CACHE WARMING JOBS
+==================================================
+
+TRIGGERS:
+- Session start/end
+- Metric finalization
+- Scheduled intervals
+
+OPERATIONS:
+- Precompute dashboard summaries
+- Store results in cache
+
+RULES:
+- Cache misses must fallback to DB
+- Cache must never be authoritative
+
+==================================================
+5. PERIODIC MAINTENANCE JOBS
+==================================================
+
+OPERATIONS:
+- Remove expired sessions from cache
+- Validate orphan references
+- Verify index health
+- Cleanup temporary files
+
+SCHEDULE:
+- Low-traffic hours preferred
+
+==================================================
+FAILURE HANDLING
+==================================================
+
+- Job failures must be logged
+- Retries must use exponential backoff
+- Permanent failures must raise alerts
+- Failed jobs must not affect user actions
+
+==================================================
+OBSERVABILITY REQUIREMENTS
+==================================================
+
+- Each job execution must be logged
+- Execution time must be tracked
+- Failure rate must be monitored
+- Alerts for repeated failures
+
+==================================================
+SECURITY CONSIDERATIONS
+==================================================
+
+- Jobs must run with restricted permissions
+- Jobs must validate input data
+- Jobs must not bypass authorization rules
+
+==================================================
+END OF DOCUMENT
+==================================================

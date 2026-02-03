@@ -61,7 +61,7 @@ const EmployeeSchema = new Schema(
 )
 
 // Unique username (login identity)
-EmployeeSchema.index({ username: 1 }, { unique: true })
+EmployeeSchema.index({ domainID: 1 }, { unique: true })
 
 // Unique email if present (optional but enforced when exists)
 EmployeeSchema.index(

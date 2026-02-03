@@ -48,7 +48,18 @@ const BugSchema = new Schema(
     },
 
     /**
-     * Embedded comments (audit-safe)
+     * Media evidence attached to the bug
+     * (screenshots, videos, logs, etc.)
+     */
+    mediaIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Media',
+      },
+    ],
+
+    /**
+     * Embedded comments (discussion & audit)
      */
     comments: [
       {
@@ -64,8 +75,17 @@ const BugSchema = new Schema(
         },
 
         /**
+         * Users tagged in the comment (for notifications)
+         */
+        mentions: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: 'Employee',
+          },
+        ],
+
+        /**
          * Snapshot of role at the time of commenting
-         * (important for audits)
          */
         roleContext: {
           type: String,

@@ -1,0 +1,205 @@
+READ STRATEGY, AGGREGATIONS, AND PERFORMANCE RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines how data must be READ from
+the system efficiently and consistently.
+
+It explains when to use:
+- simple queries
+- population
+- aggregation pipelines
+- denormalized responses
+
+The goal is predictable performance and scalable
+dashboard queries.
+
+==================================================
+GENERAL READ PRINCIPLES
+==================================================
+
+1. Reads are optimized; writes are normalized
+2. Never over-populate by default
+3. Dashboards must use aggregation
+4. Detail views may use population
+5. Avoid N+1 query patterns
+6. Index-backed queries only for hot paths
+
+==================================================
+READ CATEGORIES
+==================================================
+
+All read operations fall into one of these categories:
+
+1. Simple List Reads
+2. Detail Views
+3. Dashboard / Analytics Reads
+4. Administrative / Audit Reads
+
+Each category has a preferred strategy.
+
+==================================================
+1. SIMPLE LIST READS
+==================================================
+
+Examples:
+- List teams
+- List products
+- List employees
+- List planned sessions
+
+Strategy:
+- Direct find queries
+- Pagination required
+- Minimal fields (projection)
+
+Rules:
+- Never populate by default
+- Exclude archived records unless requested
+- Use indexed fields only
+
+Example fields:
+- _id
+- name
+- status
+- createdAt
+
+==================================================
+2. DETAIL VIEWS
+==================================================
+
+Examples:
+- Bug detail page
+- Testing session detail
+- Team detail page
+- Employee profile
+
+Strategy:
+- Single primary query
+- Controlled population
+
+Allowed population:
+- Bug -> createdBy
+- Bug -> mediaIds
+- Session -> teamId
+- TeamMember -> employeeId
+
+Rules:
+- Populate only immediate relations
+- Do not cascade populate
+- Limit populated fields explicitly
+
+==================================================
+3. DASHBOARD AND ANALYTICS READS
+==================================================
+
+Examples:
+- Team performance dashboard
+- Session summary
+- Severity distribution
+- Member leaderboard
+
+Strategy:
+- Aggregation pipelines ONLY
+
+Rules:
+- No population
+- No per-document processing
+- Group and project in database
+- Use precomputed metrics where possible
+
+Preferred sources:
+- TeamMemberMetric
+- Bug (grouped by severity, status)
+- TestingSession (timeline)
+
+==================================================
+AGGREGATION BEST PRACTICES
+==================================================
+
+- Always start with $match using indexed fields
+- Reduce dataset early
+- Use $group only after filtering
+- Use $project to shape final output
+- Avoid $lookup unless unavoidable
+- Cache heavy aggregations if reused
+
+==================================================
+4. ADMINISTRATIVE AND AUDIT READS
+==================================================
+
+Examples:
+- Audit logs
+- Role history
+- Team membership history
+
+Strategy:
+- Time-range based queries
+- Indexed sorting
+
+Rules:
+- Always filter by resourceType or actorId
+- Paginate results
+- Never populate large datasets
+
+==================================================
+CACHING GUIDELINES
+==================================================
+
+Allowed to cache:
+- Dashboard summaries
+- Leaderboards
+- Session overviews
+
+Not allowed to cache:
+- Authorization decisions
+- Active session state
+- Permission checks
+
+Cache invalidation triggers:
+- Session start/end
+- Bug severity change
+- Metric finalization
+
+==================================================
+INDEX USAGE RULES
+==================================================
+
+- Every frequent read must use an index
+- Aggregations must start with indexed match
+- Do not rely on collection scans
+- Monitor slow queries regularly
+
+==================================================
+PAGINATION STANDARDS
+==================================================
+
+- Use cursor-based pagination for large lists
+- Use limit + sort for small lists
+- Never return unbounded lists
+- Default limit must be enforced
+
+==================================================
+ANTI-PATTERNS (DO NOT DO)
+==================================================
+
+- Populate inside loops
+- Multiple sequential queries for dashboard
+- Fetch-all then filter in application
+- Unindexed sorting on large collections
+- Returning full documents unnecessarily
+
+==================================================
+ERROR HANDLING FOR READS
+==================================================
+
+- Return empty list if no data
+- Do not return 404 for empty collections
+- Return 404 only when a specific ID is missing
+- Respect authorization before querying
+
+==================================================
+END OF DOCUMENT
+==================================================

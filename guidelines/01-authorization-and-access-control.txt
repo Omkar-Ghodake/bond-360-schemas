@@ -1,0 +1,170 @@
+AUTHORIZATION AND ACCESS CONTROL RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines who can perform which actions
+on which resources in the system.
+
+Authorization is enforced at the API level using
+RoleAssignment and TeamMember context.
+
+All authorization checks must be centralized
+and MUST NOT be duplicated inside controllers.
+
+==================================================
+ROLE SOURCES
+==================================================
+
+User authority is derived from two sources:
+
+1. RoleAssignment
+   - program_manager
+   - product_manager
+
+2. TeamMember.roleInTeam
+   - team_lead
+   - team_member
+
+Authorization decisions are made using:
+- actorId (Employee)
+- active RoleAssignments
+- active TeamMember record
+- target resource (team, product, session, bug)
+
+==================================================
+ROLE DEFINITIONS (HIGH LEVEL)
+==================================================
+
+TEAM MEMBER
+- Reports bugs
+- Adds comments
+- Uploads media
+- Views sessions and bugs
+
+TEAM LEAD
+- All team member permissions
+- Creates testing sessions
+- Starts and ends sessions
+- Assigns participants
+- Archives bugs
+
+PRODUCT MANAGER
+- Views all bugs for assigned product
+- Changes bug severity
+- Changes bug priority (if applicable)
+- Adds comments
+- Cannot manage team or sessions
+
+PROGRAM MANAGER
+- Full control over a team
+- Assigns or removes team leads
+- Assigns product managers
+- Creates, starts, ends, and archives sessions
+- Overrides bug decisions
+- Manages team membership
+
+==================================================
+ACTION-LEVEL PERMISSION MATRIX
+==================================================
+
+EMPLOYEE ACTIONS
+
+Create Bug
+- Allowed: team_member, team_lead
+- Scope: active session only
+
+Update Bug Status
+- Allowed: team_lead, product_manager, program_manager
+
+Change Bug Severity
+- Allowed: product_manager, program_manager
+
+Archive Bug
+- Allowed: team_lead, program_manager
+
+--------------------------------------------------
+
+SESSION ACTIONS
+
+Create Testing Session
+- Allowed: team_lead, program_manager
+
+Update Planned Session
+- Allowed: team_lead, program_manager
+- Condition: session status must be "planned"
+
+Start Session
+- Allowed: team_lead, program_manager
+
+End Session
+- Allowed: team_lead, program_manager
+
+Archive Session
+- Allowed: program_manager only
+
+--------------------------------------------------
+
+TEAM ACTIONS
+
+Add Team Member
+- Allowed: team_lead, program_manager
+
+Remove Team Member
+- Allowed: team_lead, program_manager
+
+Promote/Demote Team Lead
+- Allowed: program_manager only
+
+--------------------------------------------------
+
+ROLE ASSIGNMENT ACTIONS
+
+Assign Program Manager
+- Allowed: system_admin or existing program_manager
+
+Assign Product Manager
+- Allowed: program_manager
+
+Revoke Role Assignment
+- Allowed: program_manager
+
+==================================================
+ENFORCEMENT RULES
+==================================================
+
+1. Authorization is checked BEFORE validation
+2. Authorization is checked BEFORE any write
+3. Unauthorized requests must return 403
+4. Authorization logic must be reusable middleware
+5. No controller may bypass authorization checks
+
+==================================================
+FAILURE RESPONSES
+==================================================
+
+Standard error responses:
+
+- UNAUTHORIZED_ACTION
+- ROLE_NOT_ASSIGNED
+- ACCESS_OUT_OF_SCOPE
+- SESSION_NOT_OWNED
+- TEAM_MISMATCH
+
+==================================================
+AUDIT REQUIREMENT
+==================================================
+
+All authorization-sensitive actions MUST create
+an AuditLog entry, including:
+
+- Role assignments
+- Role revocations
+- Session start/end
+- Bug severity changes
+- Team lead changes
+
+==================================================
+END OF DOCUMENT
+==================================================

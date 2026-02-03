@@ -1,0 +1,170 @@
+CONCURRENCY, LOCKING, AND RACE CONDITION RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines how the backend must handle
+parallel requests, race conditions, and conflicts
+to preserve data integrity and predictable behavior.
+
+These rules apply to all write APIs.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. Assume requests can arrive concurrently
+2. Never rely on frontend for correctness
+3. Enforce uniqueness at database + service level
+4. Prefer optimistic locking over manual locks
+5. Fail fast and return deterministic errors
+6. Idempotency is preferred where possible
+
+==================================================
+PRIMARY CONCURRENCY RISKS
+==================================================
+
+The system is vulnerable to race conditions in:
+
+- Starting the same session twice
+- Assigning a team member to two active sessions
+- Switching teams concurrently
+- Creating duplicate active roles
+- Updating bug severity simultaneously
+- Updating metrics from parallel bug events
+
+==================================================
+UNIQUE CONSTRAINT ENFORCEMENT
+==================================================
+
+The following uniqueness rules MUST be enforced
+using both database indexes and service logic:
+
+- One active TeamMember per employee
+- One active Program Manager per team
+- One active TestingSession per team (optional rule)
+- One active SessionParticipation per employee
+
+Database constraints must be the final guard.
+Service logic must handle duplicate key errors.
+
+==================================================
+SESSION START CONCURRENCY RULES
+==================================================
+
+When multiple requests attempt to start a session:
+
+- First request that updates status succeeds
+- Subsequent requests must fail with error
+  SESSION_ALREADY_ACTIVE
+
+Implementation guidance:
+- Use conditional update:
+  update where status = planned
+- Check modifiedCount === 1
+
+==================================================
+SESSION PARTICIPATION CONCURRENCY RULES
+==================================================
+
+When assigning participants to a session:
+
+- Verify no active SessionParticipation exists
+- Use unique index on (employeeId, leftAt = null)
+- Reject second assignment attempt
+
+Error code:
+- MEMBER_ALREADY_ASSIGNED
+
+==================================================
+TEAM SWITCH CONCURRENCY RULES
+==================================================
+
+When switching a team member:
+
+- Close old TeamMember and create new one
+  inside a transaction
+- If two switches race, one must fail
+
+Error code:
+- TEAM_SWITCH_CONFLICT
+
+==================================================
+BUG UPDATE CONCURRENCY RULES
+==================================================
+
+When multiple updates occur on a bug:
+
+- Severity and status changes must use
+  optimistic concurrency
+
+Recommended approach:
+- Compare updatedAt timestamp
+- Reject stale updates
+
+Error code:
+- STALE_BUG_UPDATE
+
+==================================================
+METRIC UPDATE CONCURRENCY RULES
+==================================================
+
+Metrics are updated frequently and concurrently.
+
+Rules:
+- Metrics must be updated using atomic operators
+  (increment, set)
+- Full recalculation must lock by sessionId
+- Finalized metrics are immutable
+
+Error code:
+- METRIC_FINALIZED
+
+==================================================
+MEDIA CONCURRENCY RULES
+==================================================
+
+- Media uploads are independent
+- Linking Media to Bug must check:
+  bug exists
+  bug is not archived
+- Parallel uploads may attach multiple media
+  without conflict
+
+==================================================
+LOCKING STRATEGY (RECOMMENDED)
+==================================================
+
+- Do NOT use long-lived locks
+- Use database-level atomic updates
+- Use transactions only when required
+- Avoid distributed locks unless unavoidable
+
+==================================================
+IDEMPOTENCY GUIDELINES
+==================================================
+
+The following operations should be idempotent:
+
+- Start session (same requestId)
+- End session
+- Archive operations
+
+If repeated, API must return success without
+duplicating effects.
+
+==================================================
+ERROR CODES (STANDARD)
+==================================================
+
+- SESSION_ALREADY_ACTIVE
+- MEMBER_ALREADY_ASSIGNED
+- TEAM_SWITCH_CONFLICT
+- DUPLICATE_ACTIVE_ROLE
+- STALE_BUG_UPDATE
+- CONCURRENT_UPDATE_REJECTED
+
+==================================================
+END OF DOCUMENT
+==================================================

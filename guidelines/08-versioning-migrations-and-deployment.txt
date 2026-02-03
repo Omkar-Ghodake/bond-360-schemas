@@ -1,0 +1,171 @@
+VERSIONING, MIGRATIONS, AND DEPLOYMENT RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines how schema changes, API
+evolution, and deployments must be handled safely
+without breaking existing functionality or data.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. Backward compatibility is mandatory
+2. Schema changes must be additive whenever possible
+3. Destructive changes require migration plans
+4. Deployments must be reversible
+5. Data migrations must be observable and resumable
+
+==================================================
+API VERSIONING STRATEGY
+==================================================
+
+API versioning is required for breaking changes.
+
+Preferred approach:
+- URL-based versioning
+
+Examples:
+- /api/v1/bugs
+- /api/v1/testing-sessions
+- /api/v2/bugs (only when breaking changes occur)
+
+Rules:
+- v1 remains supported until officially deprecated
+- New fields are added without version bump
+- Field removals or behavior changes require new version
+
+==================================================
+SCHEMA VERSIONING STRATEGY
+==================================================
+
+Schemas are versioned implicitly using additive fields.
+
+Rules:
+- Never remove fields immediately
+- Mark deprecated fields in documentation
+- Stop writing to deprecated fields first
+- Remove fields only after full migration
+
+Optional field:
+- schemaVersion (number) may be added if needed
+
+==================================================
+MIGRATION TYPES
+==================================================
+
+1. NON-BREAKING MIGRATIONS
+2. BREAKING MIGRATIONS
+3. DATA BACKFILL MIGRATIONS
+
+--------------------------------------------------
+1. NON-BREAKING MIGRATIONS
+--------------------------------------------------
+
+Examples:
+- Adding a new optional field
+- Adding a new index
+- Adding a new enum value
+
+Rules:
+- No downtime required
+- Safe to deploy immediately
+- Old data remains valid
+
+--------------------------------------------------
+2. BREAKING MIGRATIONS
+--------------------------------------------------
+
+Examples:
+- Removing a field
+- Changing field meaning
+- Changing validation rules
+
+Rules:
+- Require new API version
+- Require dual-read or dual-write phase
+- Require explicit migration plan
+
+--------------------------------------------------
+3. DATA BACKFILL MIGRATIONS
+--------------------------------------------------
+
+Examples:
+- Populating new fields from old data
+- Recalculating metrics
+- Normalizing existing records
+
+Rules:
+- Run as background jobs
+- Process data in batches
+- Must be idempotent
+- Must support resume on failure
+
+==================================================
+MIGRATION EXECUTION RULES
+==================================================
+
+- Never run migrations inside request handlers
+- Use dedicated migration scripts
+- Use read/write locks if required
+- Log progress and failures
+- Validate results after completion
+
+==================================================
+DEPLOYMENT STRATEGY
+==================================================
+
+Preferred deployment approach:
+- Rolling deployments
+
+Rules:
+- New code must handle old data
+- Old code must ignore new fields
+- Feature flags for risky changes
+- Gradual rollout preferred
+
+==================================================
+ROLLBACK STRATEGY
+==================================================
+
+Rollback must be possible at any stage.
+
+Rules:
+- Database schema changes must be reversible
+- Code rollback must not require data rollback
+- Destructive migrations require backups
+- Rollback steps must be documented
+
+==================================================
+INDEX DEPLOYMENT RULES
+==================================================
+
+- Add indexes in background mode
+- Never drop indexes during peak traffic
+- Monitor index build progress
+- Validate query plans after index changes
+
+==================================================
+DEPRECATION POLICY
+==================================================
+
+- Deprecated fields must be documented
+- Deprecation period must be announced
+- Writes to deprecated fields must stop first
+- Reads may continue temporarily
+- Final removal scheduled and communicated
+
+==================================================
+OBSERVABILITY AND SAFETY
+==================================================
+
+- Monitor error rates during deployment
+- Monitor latency and throughput
+- Validate critical flows post-deploy
+- Enable alerts for migration failures
+
+==================================================
+END OF DOCUMENT
+==================================================

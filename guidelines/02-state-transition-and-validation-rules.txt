@@ -1,0 +1,200 @@
+STATE TRANSITION AND VALIDATION RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines valid and invalid state
+transitions and business validation rules.
+
+These rules MUST be enforced at the API level.
+Schemas alone are not sufficient to guarantee
+data correctness.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. No resource may move backward in lifecycle
+2. Archived resources are read-only
+3. State transitions are explicit, not implicit
+4. Invalid transitions must return errors
+5. Validation occurs AFTER authorization
+
+==================================================
+TESTING SESSION STATE RULES
+==================================================
+
+VALID SESSION STATES:
+- planned
+- active
+- completed
+- archived
+
+--------------------------------------------------
+VALID TRANSITIONS
+--------------------------------------------------
+
+planned -> active
+active -> completed
+completed -> archived
+planned -> archived
+
+--------------------------------------------------
+INVALID TRANSITIONS
+--------------------------------------------------
+
+active -> planned
+completed -> active
+archived -> any state
+planned -> completed (must go through active)
+
+--------------------------------------------------
+SESSION VALIDATION RULES
+--------------------------------------------------
+
+- Session can be started only once
+- Session must have at least one participant
+- Session participants cannot change after start
+- Session cannot be updated when status is active
+- Session cannot be ended if not active
+- Archived sessions are fully read-only
+
+==================================================
+BUG STATE AND VALIDATION RULES
+==================================================
+
+VALID BUG STATES:
+- open
+- in_progress
+- resolved
+- closed
+- rejected
+
+--------------------------------------------------
+VALID TRANSITIONS
+--------------------------------------------------
+
+open -> in_progress
+open -> resolved
+in_progress -> resolved
+resolved -> closed
+open -> rejected
+
+--------------------------------------------------
+INVALID TRANSITIONS
+--------------------------------------------------
+
+closed -> any state
+rejected -> any state
+resolved -> open
+archived -> any state
+
+--------------------------------------------------
+BUG VALIDATION RULES
+--------------------------------------------------
+
+- Bugs can be created only during active sessions
+- Archived bugs cannot be modified
+- Severity changes require authorization
+- Severity changes must trigger metric recalculation
+- Media cannot be attached to archived bugs
+- Comments cannot be edited or deleted (append-only)
+
+==================================================
+TEAM MEMBER STATE RULES
+==================================================
+
+TEAM MEMBER STATES:
+- active (leftAt = null)
+- inactive (leftAt set)
+
+--------------------------------------------------
+VALID TRANSITIONS
+--------------------------------------------------
+
+active -> inactive
+inactive -> active (new TeamMember record only)
+
+--------------------------------------------------
+TEAM MEMBER VALIDATION RULES
+--------------------------------------------------
+
+- Employee can have only one active team
+- Team change must close previous membership
+- Historical TeamMember records are immutable
+- Role changes do not create new TeamMember records
+
+==================================================
+ROLE ASSIGNMENT STATE RULES
+==================================================
+
+ROLE ASSIGNMENT STATES:
+- active (revokedAt = null)
+- revoked (revokedAt set)
+
+--------------------------------------------------
+ROLE ASSIGNMENT VALIDATION RULES
+--------------------------------------------------
+
+- Only one active program manager per team
+- Multiple product managers per product allowed
+- Revoked roles cannot be reactivated
+- New role assignment required after revocation
+
+==================================================
+TEAM MEMBER METRIC RULES
+==================================================
+
+METRIC STATES:
+- live (session active)
+- finalized (session completed)
+
+--------------------------------------------------
+METRIC VALIDATION RULES
+--------------------------------------------------
+
+- Metrics can update only while session is active
+- Finalized metrics are read-only
+- Metric recalculation required on severity change
+- Metrics must belong to exactly one session
+- Metrics must belong to exactly one team member
+
+==================================================
+MEDIA VALIDATION RULES
+==================================================
+
+- Media must belong to an existing bug
+- Media cannot be attached to archived bugs
+- Archived media cannot be reattached
+- Media deletion is always soft delete
+
+==================================================
+ARCHIVAL RULES (GLOBAL)
+==================================================
+
+- Archival is irreversible
+- Archived documents are read-only
+- Archival must be logged in AuditLog
+- Archival must cascade logically (not physically)
+
+Examples:
+- Archived session prevents new bugs
+- Archived bug prevents new media
+- Archived team prevents new sessions
+
+==================================================
+ERROR CODES (STANDARD)
+==================================================
+
+- INVALID_STATE_TRANSITION
+- RESOURCE_ARCHIVED
+- SESSION_NOT_ACTIVE
+- SESSION_ALREADY_ACTIVE
+- BUG_NOT_MODIFIABLE
+- TEAM_MEMBER_INACTIVE
+- METRIC_FINALIZED
+
+==================================================
+END OF DOCUMENT
+==================================================

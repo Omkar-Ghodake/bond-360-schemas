@@ -1,0 +1,200 @@
+ERROR HANDLING AND API RESPONSE CONTRACT
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines a consistent error handling
+strategy and API response contract for all backend
+endpoints.
+
+A strict contract ensures predictable frontend
+behavior, easier debugging, and safe retries.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. All APIs must return a structured response
+2. Errors must be explicit and machine-readable
+3. Error codes must be stable and documented
+4. HTTP status codes must reflect intent
+5. Sensitive internal details must not be exposed
+6. Clients must not parse error messages
+
+==================================================
+STANDARD RESPONSE FORMAT
+==================================================
+
+SUCCESS RESPONSE:
+
+{
+  "success": true,
+  "data": <payload>,
+  "meta": {
+    "requestId": "<uuid>",
+    "timestamp": "<iso-date>"
+  }
+}
+
+--------------------------------------------------
+
+ERROR RESPONSE:
+
+{
+  "success": false,
+  "error": {
+    "code": "<ERROR_CODE>",
+    "message": "<human_readable_message>",
+    "details": <optional_object>
+  },
+  "meta": {
+    "requestId": "<uuid>",
+    "timestamp": "<iso-date>"
+  }
+}
+
+==================================================
+HTTP STATUS CODE GUIDELINES
+==================================================
+
+200 OK
+- Successful fetch
+- Idempotent success
+
+201 CREATED
+- Resource created successfully
+
+204 NO CONTENT
+- Successful operation with no payload
+
+400 BAD REQUEST
+- Validation errors
+- Invalid input
+- Missing required fields
+
+401 UNAUTHORIZED
+- Authentication required or failed
+
+403 FORBIDDEN
+- Authenticated but action not allowed
+
+404 NOT FOUND
+- Resource does not exist or not visible
+
+409 CONFLICT
+- Uniqueness violation
+- State conflict
+- Concurrency conflict
+
+422 UNPROCESSABLE ENTITY
+- Valid request but invalid state transition
+
+500 INTERNAL SERVER ERROR
+- Unexpected backend error
+
+==================================================
+STANDARD ERROR CODES
+==================================================
+
+AUTHORIZATION ERRORS:
+- UNAUTHORIZED_ACTION
+- ROLE_NOT_ASSIGNED
+- ACCESS_OUT_OF_SCOPE
+
+VALIDATION ERRORS:
+- INVALID_INPUT
+- REQUIRED_FIELD_MISSING
+- INVALID_ENUM_VALUE
+
+STATE ERRORS:
+- INVALID_STATE_TRANSITION
+- RESOURCE_ARCHIVED
+- SESSION_NOT_ACTIVE
+- SESSION_ALREADY_ACTIVE
+- BUG_NOT_MODIFIABLE
+
+CONCURRENCY ERRORS:
+- DUPLICATE_ACTIVE_RECORD
+- MEMBER_ALREADY_ASSIGNED
+- TEAM_SWITCH_CONFLICT
+- STALE_BUG_UPDATE
+- CONCURRENT_UPDATE_REJECTED
+
+TRANSACTION ERRORS:
+- TRANSACTION_FAILED
+- METRIC_UPDATE_FAILED
+
+MEDIA ERRORS:
+- MEDIA_ATTACH_NOT_ALLOWED
+- MEDIA_ARCHIVED
+
+==================================================
+RETRY RULES
+==================================================
+
+CLIENT MAY RETRY:
+- 409 CONFLICT (with backoff)
+- 500 INTERNAL SERVER ERROR
+- Idempotent operations only
+
+CLIENT MUST NOT RETRY:
+- 400 BAD REQUEST
+- 401 UNAUTHORIZED
+- 403 FORBIDDEN
+- 422 UNPROCESSABLE ENTITY
+
+==================================================
+VALIDATION ERROR DETAILS FORMAT
+==================================================
+
+For input validation errors, the error.details
+field should follow this format:
+
+{
+  "fields": {
+    "fieldName": "error description"
+  }
+}
+
+Example:
+{
+  "fields": {
+    "severity": "Invalid severity value",
+    "sessionId": "Session is not active"
+  }
+}
+
+==================================================
+AUDIT AND LOGGING REQUIREMENTS
+==================================================
+
+The following errors must be logged internally
+and may generate AuditLog entries:
+
+- Authorization failures
+- State transition violations
+- Role assignment changes
+- Session lifecycle actions
+- Bug severity or status changes
+
+==================================================
+SECURITY CONSIDERATIONS
+==================================================
+
+- Never expose stack traces in API responses
+- Never expose database error messages directly
+- Mask internal IDs when necessary
+- Log full error context server-side only
+
+==================================================
+VERSIONING CONSIDERATIONS
+==================================================
+
+- Error codes must remain backward compatible
+- New error codes may be added
+- Existing error codes must not change meaning
+
+==================================================
+END OF DOCUMENT
+==================================================

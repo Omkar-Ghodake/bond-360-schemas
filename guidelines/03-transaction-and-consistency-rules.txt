@@ -1,0 +1,175 @@
+TRANSACTION AND CONSISTENCY RULES
+
+==================================================
+PURPOSE
+==================================================
+
+This document defines which operations must be
+executed atomically and how data consistency is
+maintained across multiple schemas.
+
+Transactions prevent partial writes, race
+conditions, and inconsistent states.
+
+==================================================
+GENERAL PRINCIPLES
+==================================================
+
+1. Multi-document writes must be transactional
+2. Read operations must not mutate data
+3. Failed transactions must rollback fully
+4. Transactions must be short-lived
+5. Transactions must not include external calls
+6. AuditLog creation is part of the transaction
+
+==================================================
+WHEN TRANSACTIONS ARE REQUIRED
+==================================================
+
+Transactions are REQUIRED for the following events:
+
+- Operations that write to more than one schema
+- Operations that update metrics based on state
+- Operations that enforce uniqueness constraints
+- Operations that change lifecycle states
+
+==================================================
+MANDATORY TRANSACTION SCENARIOS
+==================================================
+
+SCENARIO T1: START TESTING SESSION
+
+OPERATIONS (ATOMIC):
+1. Update TestingSession.status = active
+2. Create SessionParticipation documents
+3. Create AuditLog entry
+
+FAILURE HANDLING:
+- If any step fails, session must remain planned
+- No SessionParticipation records may exist
+
+--------------------------------------------------
+
+SCENARIO T2: END TESTING SESSION
+
+OPERATIONS (ATOMIC):
+1. Update TestingSession.status = completed
+2. Update all SessionParticipation.leftAt
+3. Finalize TeamMemberMetric records
+4. Create AuditLog entry
+
+FAILURE HANDLING:
+- Session must remain active if any step fails
+- Metrics must not be finalized partially
+
+--------------------------------------------------
+
+SCENARIO T3: BUG CREATION
+
+OPERATIONS (ATOMIC):
+1. Create Bug
+2. Update TeamMemberMetric (increment counts)
+3. Create AuditLog entry (optional, if required)
+
+FAILURE HANDLING:
+- Bug must not exist if metric update fails
+- Metric must not update without bug creation
+
+--------------------------------------------------
+
+SCENARIO T4: BUG SEVERITY OR STATUS CHANGE
+
+OPERATIONS (ATOMIC):
+1. Update Bug severity or status
+2. Recalculate TeamMemberMetric
+3. Create AuditLog entry
+
+FAILURE HANDLING:
+- Bug must retain previous severity or status
+- Metrics must not be partially recalculated
+
+--------------------------------------------------
+
+SCENARIO T5: TEAM MEMBER SWITCH
+
+OPERATIONS (ATOMIC):
+1. Close existing TeamMember (set leftAt)
+2. Create new TeamMember for new team
+3. Create AuditLog entry
+
+FAILURE HANDLING:
+- Employee must not end up with zero or two teams
+- Old TeamMember must remain active if new fails
+
+--------------------------------------------------
+
+SCENARIO T6: ROLE ASSIGNMENT OR REVOCATION
+
+OPERATIONS (ATOMIC):
+1. Revoke existing RoleAssignment if required
+2. Create new RoleAssignment
+3. Create AuditLog entry
+
+FAILURE HANDLING:
+- No duplicate active roles allowed
+- Previous role must remain active on failure
+
+==================================================
+WHEN TRANSACTIONS ARE NOT REQUIRED
+==================================================
+
+Transactions are NOT required for:
+
+- Read-only fetch operations
+- Simple single-document updates
+- Comment additions (append-only)
+- Media creation (if not linked immediately)
+
+==================================================
+TRANSACTION IMPLEMENTATION GUIDELINES
+==================================================
+
+- Use MongoDB sessions
+- Start transaction at service layer
+- Do not start transactions in controllers
+- Commit only after all validations pass
+- Abort transaction on any error
+- Return meaningful error codes on abort
+
+==================================================
+EVENTUAL CONSISTENCY (ALLOWED CASES)
+==================================================
+
+Eventual consistency is allowed for:
+
+- Notifications (mentions)
+- Analytics aggregation
+- Dashboard caching
+- Background cleanup jobs
+
+These must NEVER affect core correctness.
+
+==================================================
+ROLLBACK RULES
+==================================================
+
+On transaction failure:
+
+- No partial writes allowed
+- No AuditLog entry created
+- No side effects permitted
+- Error must be propagated to API response
+
+==================================================
+ERROR CODES (STANDARD)
+==================================================
+
+- TRANSACTION_FAILED
+- CONCURRENT_UPDATE_DETECTED
+- DUPLICATE_ACTIVE_RECORD
+- METRIC_UPDATE_FAILED
+- SESSION_STATE_CONFLICT
+
+==================================================
+END OF DOCUMENT
+==================================================

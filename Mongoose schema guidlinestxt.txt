@@ -1,0 +1,33 @@
+Global Rule (Applies Everywhere)
+
+Facts are created first.
+Derived data is updated after.
+History is never overwritten.
+
+-----------------------------------------------------------------------
+
+✅ Correct Mental Model (Very Important)
+Product answers:
+
+“What is the product?”
+
+RoleAssignment answers:
+
+“Who has authority over what, and when?”
+
+Team / Program Manager answers:
+
+“Who executes or governs?”
+
+These are separate concerns and must stay separate.
+
+------------------------------------------------------------------------
+
+1️⃣ Product Managers (product-scoped, not team-scoped)
+Product Managers do NOT belong to a team. They belong to Product
+
+3️⃣ Program Managers (team-scoped, not product-scoped)
+Program Managers do NOT belong to Product
+
+4️⃣ Teams associated with Product (Implicit, not stored)
+Teams are linked to products via TestingSession, not directly.

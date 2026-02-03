@@ -1,0 +1,224 @@
+BACKEND IMPLEMENTATION PLAYBOOK AND CHECKLIST
+
+==================================================
+PURPOSE
+==================================================
+
+This document is a practical, end-to-end checklist
+for implementing, reviewing, and maintaining the
+backend system.
+
+It consolidates all rules, flows, and constraints
+into a single execution guide for engineers.
+
+==================================================
+SECTION 1: SCHEMA IMPLEMENTATION CHECKLIST
+==================================================
+
+CONFIRM ALL SCHEMAS EXIST:
+
+- Employee
+- Team
+- Product
+- TeamMember
+- RoleAssignment
+- TestingSession
+- SessionParticipation
+- Bug
+- TeamMemberMetric
+- Media
+- AuditLog
+
+FOR EACH SCHEMA:
+- Indexes defined and reviewed
+- archivedAt or revokedAt used (no hard deletes)
+- Timestamps enabled where required
+- Enum values documented
+- Partial unique indexes validated
+
+==================================================
+SECTION 2: AUTHORIZATION CHECKLIST
+==================================================
+
+FOR EVERY WRITE API:
+- Authorization middleware applied
+- RoleAssignment evaluated
+- TeamMember context validated
+- Scope (team/product/session) verified
+
+CONFIRM:
+- No controller bypasses authorization
+- 403 returned for unauthorized access
+- Sensitive actions create AuditLog
+
+==================================================
+SECTION 3: STATE TRANSITION CHECKLIST
+==================================================
+
+CONFIRM VALID STATES ONLY:
+
+- TestingSession lifecycle enforced
+- Bug lifecycle enforced
+- Metrics finalized correctly
+- Archived resources are read-only
+
+CONFIRM:
+- Invalid transitions return 422
+- Archived resources cannot be mutated
+- State checks occur before writes
+
+==================================================
+SECTION 4: TRANSACTION CHECKLIST
+==================================================
+
+TRANSACTIONS REQUIRED FOR:
+- Session start
+- Session end
+- Bug creation + metric update
+- Bug severity/status change
+- Team member switch
+- Role assignment changes
+
+CONFIRM:
+- MongoDB sessions used
+- Transactions start at service layer
+- Rollbacks handled correctly
+- No external calls inside transactions
+
+==================================================
+SECTION 5: CONCURRENCY CHECKLIST
+==================================================
+
+CONFIRM DATABASE GUARDS:
+- Unique active TeamMember per employee
+- Unique active Program Manager per team
+- Unique active SessionParticipation per employee
+
+CONFIRM API BEHAVIOR:
+- Conditional updates used
+- Duplicate key errors handled
+- Deterministic conflict errors returned
+- Optimistic locking for Bug updates
+
+==================================================
+SECTION 6: ERROR HANDLING CHECKLIST
+==================================================
+
+CONFIRM STANDARD RESPONSE FORMAT:
+- success flag present
+- error.code used consistently
+- HTTP status codes correct
+- requestId included
+
+CONFIRM:
+- No stack traces exposed
+- Validation errors structured
+- Retry rules respected
+
+==================================================
+SECTION 7: READ & PERFORMANCE CHECKLIST
+==================================================
+
+FOR READ APIs:
+- Lists use pagination
+- Detail views use controlled population
+- Dashboards use aggregation only
+- Index-backed queries only
+
+CONFIRM:
+- No N+1 queries
+- No unbounded reads
+- Archived data excluded by default
+
+==================================================
+SECTION 8: MEDIA HANDLING CHECKLIST
+==================================================
+
+CONFIRM:
+- Media created independently
+- Media linked via Bug.mediaIds
+- Archived bugs reject media attachment
+- Media deletion is soft delete
+- Storage cleanup handled asynchronously
+
+==================================================
+SECTION 9: AUDIT LOG CHECKLIST
+==================================================
+
+AUDIT LOG REQUIRED FOR:
+- Role assignment changes
+- Session start/end
+- Bug severity/status change
+- Team member changes
+- Session archival
+
+CONFIRM:
+- AuditLog is append-only
+- TTL index enabled
+- No updates or deletes on logs
+
+==================================================
+SECTION 10: ASYNC AND BACKGROUND JOB CHECKLIST
+==================================================
+
+CONFIRM ASYNC JOBS FOR:
+- Notifications
+- Media cleanup
+- Metric recalculation
+- Cache warming
+- Maintenance tasks
+
+CONFIRM:
+- Jobs are idempotent
+- Failures logged
+- Retries enabled
+- Jobs do not bypass authorization
+
+==================================================
+SECTION 11: DEPLOYMENT AND MIGRATION CHECKLIST
+==================================================
+
+BEFORE DEPLOYMENT:
+- Backward compatibility verified
+- New fields optional
+- Index changes reviewed
+- Feature flags added if needed
+
+DURING DEPLOYMENT:
+- Rolling deploy used
+- Error rates monitored
+- Latency monitored
+
+AFTER DEPLOYMENT:
+- Critical flows validated
+- Dashboards checked
+- Logs reviewed
+
+==================================================
+SECTION 12: SECURITY CHECKLIST
+==================================================
+
+CONFIRM:
+- Authentication enforced
+- Authorization centralized
+- Sensitive data masked
+- Input validated
+- Rate limits applied
+
+==================================================
+SECTION 13: FINAL GO/NO-GO CHECK
+==================================================
+
+SYSTEM IS READY IF:
+- All schemas implemented
+- All rules enforced
+- All critical paths tested
+- No hard deletes exist
+- AuditLog covers sensitive actions
+
+IF ANY ITEM FAILS:
+- DO NOT RELEASE
+
+==================================================
+END OF DOCUMENT
+==================================================

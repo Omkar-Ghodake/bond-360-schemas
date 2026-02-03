@@ -1,0 +1,351 @@
+SYSTEM FLOW FOR SCHEMA CREATION, FETCH, UPDATE, AND ARCHIVAL
+BASED ON REAL SCENARIOS AND EVENTS
+
+==================================================
+PART 0: FOUNDATIONAL SETUP (ONE TIME)
+==================================================
+
+EVENT 0: SYSTEM BOOTSTRAP
+
+CREATE OPERATIONS:
+1. Employee
+2. Team
+3. Product
+
+FETCH OPERATIONS:
+- Fetch all employees
+- Fetch all teams
+- Fetch all products
+
+UPDATE OPERATIONS:
+- Update employee profile
+- Update team details
+- Update product details
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive employee (archivedAt)
+- Archive team (archivedAt)
+- Archive product (archivedAt)
+
+NOTES:
+- Base reference documents
+- Rarely deleted, usually archived
+- Used across entire system
+
+==================================================
+SCENARIO 1: EMPLOYEE ONBOARDING
+==================================================
+
+EVENT: NEW EMPLOYEE JOINS ORGANIZATION
+
+CREATE OPERATIONS:
+1. Employee
+
+FETCH OPERATIONS:
+- Fetch employee profile
+- Fetch employee team membership history
+- Fetch employee role assignments
+
+UPDATE OPERATIONS:
+- Update employee profile details
+- Reset or update credentials
+- Update profile image
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive employee (soft delete)
+
+==================================================
+SCENARIO 2: TEAM GOVERNANCE AND AUTHORITY
+==================================================
+
+EVENT 2.1: ASSIGN PROGRAM MANAGER TO TEAM
+
+CREATE OPERATIONS:
+1. RoleAssignment
+   role = program_manager
+   scopeType = team
+   scopeId = teamId
+
+FETCH OPERATIONS:
+- Fetch current program manager of team
+- Fetch program manager history for team
+
+UPDATE OPERATIONS:
+- Revoke existing program manager (set revokedAt)
+- Update permissions for program manager
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive role assignment (revokedAt)
+
+CONSTRAINTS:
+- Only one active program manager per team
+
+--------------------------------------------------
+
+EVENT 2.2: ASSIGN PRODUCT MANAGERS TO PRODUCT
+
+CREATE OPERATIONS:
+1. RoleAssignment
+   role = product_manager
+   scopeType = product
+   scopeId = productId
+
+FETCH OPERATIONS:
+- Fetch active product managers of product
+- Fetch product manager history
+
+UPDATE OPERATIONS:
+- Update product manager permissions
+- Temporarily revoke access (revokedAt)
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive product manager role assignment
+
+==================================================
+SCENARIO 3: EMPLOYEE JOINS A TEAM (EXECUTION ROLE)
+==================================================
+
+EVENT: ADD EMPLOYEE TO TEAM
+
+CREATE OPERATIONS:
+1. TeamMember
+   roleInTeam = member OR lead
+
+FETCH OPERATIONS:
+- Fetch active members of team
+- Fetch team leads
+- Fetch employee team history
+
+UPDATE OPERATIONS:
+- Promote or demote team member (member <-> lead)
+- Update roleInTeam
+- Add reason for role change
+
+DELETE / ARCHIVE OPERATIONS:
+- Remove employee from team (set leftAt)
+
+CONSTRAINTS:
+- Employee can belong to only one active team
+
+==================================================
+SCENARIO 4: TESTING SESSION LIFECYCLE
+==================================================
+
+EVENT 4.1: TESTING SESSION PLANNED
+
+CREATE OPERATIONS:
+1. TestingSession
+   status = planned
+
+FETCH OPERATIONS:
+- Fetch planned sessions by team
+- Fetch planned sessions by product
+
+UPDATE OPERATIONS:
+- Update session scope
+- Update builds
+- Update target platforms
+- Update participants (if custom)
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive planned session before start
+
+--------------------------------------------------
+
+EVENT 4.2: TESTING SESSION STARTS
+
+CREATE OPERATIONS:
+1. SessionParticipation
+   one per participating team member
+
+UPDATE OPERATIONS:
+2. TestingSession
+   status = active
+
+FETCH OPERATIONS:
+- Fetch active sessions for team
+- Fetch active participants
+- Fetch session details
+
+CONSTRAINTS:
+- A team member cannot be in two active sessions
+
+--------------------------------------------------
+
+EVENT 4.3: TESTING SESSION ENDS
+
+UPDATE OPERATIONS:
+1. TestingSession
+   status = completed
+2. SessionParticipation
+   set leftAt for all participants
+
+FETCH OPERATIONS:
+- Fetch completed sessions
+- Fetch session timeline
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive completed session (archivedAt)
+
+==================================================
+SCENARIO 5: BUG LIFECYCLE
+==================================================
+
+EVENT 5.1: BUG REPORTED BY TEAM MEMBER
+
+CREATE OPERATIONS:
+1. Bug
+   - mediaIds may be empty initially
+
+UPDATE OPERATIONS:
+2. TeamMemberMetric
+   increment counts
+   update score
+
+FETCH OPERATIONS:
+- Fetch bugs by session
+- Fetch bugs by team member
+- Fetch bugs by severity
+- Fetch bugs by product
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive bug (archivedAt)
+
+--------------------------------------------------
+
+EVENT 5.2: BUG UPDATED
+
+UPDATE OPERATIONS:
+1. Bug
+   - severity change
+   - status change
+   - new comment added
+   - mediaIds updated (add or remove media)
+
+2. TeamMemberMetric
+   recalculate if severity or status changes
+
+CREATE OPERATIONS:
+3. AuditLog
+   for sensitive updates
+
+FETCH OPERATIONS:
+- Fetch bug with comments and media
+- Fetch bug update history
+- Fetch audit logs
+
+==================================================
+SCENARIO 6: METRICS AND PERFORMANCE
+==================================================
+
+EVENT 6.1: LIVE METRIC UPDATE DURING SESSION
+
+CREATE OR UPDATE OPERATIONS:
+1. TeamMemberMetric
+   - update metrics
+   - update score
+
+FETCH OPERATIONS:
+- Fetch team member metrics
+- Fetch team performance summary
+- Fetch leaderboard data
+
+--------------------------------------------------
+
+EVENT 6.2: SESSION FINALIZED
+
+UPDATE OPERATIONS:
+1. TeamMemberMetric
+   isFinalized = true
+
+FETCH OPERATIONS:
+- Fetch final reports
+- Fetch dashboard analytics
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive old metric snapshots if needed
+
+==================================================
+SCENARIO 7: TEAM CHANGE
+==================================================
+
+EVENT: TEAM MEMBER SWITCHES TEAM
+
+UPDATE OPERATIONS:
+1. TeamMember
+   set leftAt on old team
+
+CREATE OPERATIONS:
+2. TeamMember
+   create new team membership
+
+FETCH OPERATIONS:
+- Fetch employee team history
+- Fetch team churn data
+
+==================================================
+SCENARIO 8: MEDIA AND EVIDENCE
+==================================================
+
+EVENT: MEDIA UPLOADED
+
+CREATE OPERATIONS:
+1. Media
+
+UPDATE OPERATIONS:
+2. Bug
+   add Media _id to bug.mediaIds[]
+
+FETCH OPERATIONS:
+- Fetch media linked to a bug
+- Fetch bug with mediaIds populated
+- Fetch media uploaded by employee
+
+DELETE / ARCHIVE OPERATIONS:
+- Archive media (soft delete)
+
+==================================================
+SCENARIO 9: AUDITING
+==================================================
+
+EVENT: SENSITIVE SYSTEM ACTION
+
+CREATE OPERATIONS:
+1. AuditLog
+
+FETCH OPERATIONS:
+- Fetch audit logs by actor
+- Fetch audit logs by resource
+- Fetch audit logs by time range
+
+DELETE / ARCHIVE OPERATIONS:
+- Automatic TTL cleanup (no manual delete)
+
+==================================================
+GLOBAL DOCUMENT CREATION ORDER (CRITICAL)
+==================================================
+
+1. Employee
+2. Team or Product
+3. RoleAssignment
+4. TeamMember
+5. TestingSession
+6. SessionParticipation
+7. Bug
+8. TeamMemberMetric
+9. Media
+10. AuditLog
+
+==================================================
+GLOBAL UPDATE AND DELETE RULES
+==================================================
+
+- Never hard delete core documents
+- Always use archivedAt or revokedAt
+- Never overwrite historical data
+- Always append or close records
+- All sensitive updates create AuditLog
+
+==================================================
+END OF DOCUMENT
+==================================================
