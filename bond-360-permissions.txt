@@ -1,0 +1,45 @@
+# Roles: (sorted according hierarchy)
+1. ADMIN
+2. PROGRAM_MANAGER
+3. TEAM_LEAD
+4. SPOC
+5. TEAM_MEMBER
+6. EMPLOYEE
+7. PRODUCT_MANAGER
+
+# Format for permission:
+["{schema}_{permission}"]
+
+# Permissions
+1. ADMIN
+["all_all"]
+
+2. PROGRAM_MANAGER
+["bug_all", "media_all", "sessionParticipation_all", "teamMember_all", "teamMemberMetrics_all", "testingSession_all", "product_all", "roleAssignment_all", "team_self", "emp_all"]
+
+3. TEAM_LEAD
+["bug_all", "media_all", "sessionParticipation_all", "teamMember_self", "teamMemberMetrics_self", "testingSession_all", "product_all", "roleAssignment_teamLead", "roleAssignment_spoc", "team_self", "emp_self"]
+
+4. SPOC
+["bug_all", "media_all", "sessionParticipation_all", "teamMember_self", "teamMemberMetrics_self", "testingSession_all", "product_self","roleAssignment_spoc", "emp_self"]
+
+5. TEAM_MEMBER
+["bug_self", "media_self", "teamMember_self", "teamMemberMetrics_self", "emp_self"]
+
+6. EMPLOYEE
+["emp_self"]
+
+7. PRODUCT_MANAGER
+["bug_all", "product_self", "roleAssignment_productManager", "roleAssignment_spoc", "emp_self"]
+
+# Schema - Level/Scope
+1. Employee - ADMIN
+2. Product - PRODUCT_MANAGER/PROJECT_MANAGER
+3. Team - PROGRAM_MANAGER
+4. TestingSession - SPOC
+5. RoleAssignment - TEAM_LEAD
+6. Media - TEAM_MEMBER
+7. SessionParticipation - TEAM_MEMBER
+8. TeamMember - TEAM_MEMBER
+9. TeamMemberMetric - TEAM_MEMBER
+10. Bug - TEAM_MEMBER
